@@ -5,18 +5,25 @@
 
     GET /SERVICE/QueryPrice/{md5(json)}?q={base64(cryptojs_aes(json, "lvr.land.moi.gov.tw"))}
 
-passphrase 就是 `window.location.host`。呼叫前要先跟 /jsp/setToken.jsp 拿一次性 token
-並帶著同一個 JSESSIONID。回傳的每一筆都帶 lat/lon，所以半徑搜尋不需要另外 geocode 成交案件。
+passphrase 就是 `window.location.host`。回傳的每一筆都帶 lat/lon，所以半徑搜尋
+不需要另外 geocode 成交案件。
+
+官網會先跟 /jsp/setToken.jsp 拿一次性 token 再帶進 payload，但**實測伺服器根本
+不驗證** token 與 session —— 空字串、亂編的值都照樣回完整結果。所以這支 client 的
+token 是 best-effort，而且整個請求是無狀態的：URL 算好之後誰都能抓。
+`build_url()` 就是為此拆出來的（見 --print-url）。
 
 用法：
     python3 lvr.py --city A --town A02 --type biz --start 114/1 --end 115/7
     python3 lvr.py --city A --town A02 --type rent --json out.json
+    python3 lvr.py --city A --town A02 --print-url      # 只算 URL，不連線
     python3 lvr.py --list-towns A
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import gzip
 import hashlib
 import http.cookiejar
@@ -112,15 +119,19 @@ class LVRClient:
             self._primed = True
 
     def _token(self) -> str:
-        self._prime()
-        raw = self._get(BASE + "/jsp/setToken.jsp").decode("utf-8", "replace").strip()
+        """取一次性 token。
+
+        實測 QueryPrice **不會驗證** token 或 session —— 空字串、亂編的值都照樣回
+        完整結果。所以這裡是 best-effort：拿得到就帶上（跟官網行為一致，比較不顯眼），
+        拿不到也不要讓整個查詢失敗。
+        """
         try:
+            self._prime()
+            raw = self._get(BASE + "/jsp/setToken.jsp").decode("utf-8", "replace").strip()
             tok = json.loads(raw)["token"]
-        except Exception as exc:  # noqa: BLE001
-            raise LVRError(f"取 token 失敗: {raw[:200]}") from exc
-        if tok == "401":
-            raise LVRError("token 回 401，session 失效")
-        return tok
+            return "" if tok == "401" else tok
+        except Exception:  # noqa: BLE001
+            return ""
 
     # -- 參考資料 --------------------------------------------------------
     def cities(self) -> list[dict[str, Any]]:
@@ -151,7 +162,7 @@ class LVRClient:
         return city["code"], town["code"]
 
     # -- 查詢 ------------------------------------------------------------
-    def query(
+    def build_url(
         self,
         qry_type: str = BIZ,
         city: str = "",
@@ -172,16 +183,20 @@ class LVRClient:
         rent_order: str = "",
         purpose: str = "",
         extra: dict[str, str] | None = None,
-    ) -> list[dict[str, Any]]:
-        """查一次。`start`/`end` 用民國 "114/1" 或 "1141" 格式。
+        token: str | None = None,
+    ) -> str:
+        """組出查詢用的完整 URL，**不發送任何請求**。
 
-        回傳原始欄位的 list；用 normalize() 轉成好懂的 schema。
+        會拆成獨立方法是因為：加密與雜湊都是純運算，不需要網路。在沒有對外連線的
+        環境（claude.ai 沙箱、CI）裡可以先在本地算出 URL，再交給有網路的一方去抓。
+
+        `start`/`end` 用民國 "114/1" 或 "1141" 格式。
         """
         sy, sm = _split_ym(start)
         ey, em = _split_ym(end)
         if qry_type == RENT and (not ptype or ptype == "1,2,3,4,5"):
             ptype = "1,2,4,6,7"  # 官網 #rent_ptype 的預設值
-        token = self._token()
+        token = "" if token is None else token
 
         # 欄位順序必須跟官網 JS 的 $.extend(defaults, dataObj) 一致 ——
         # URL path 是這串 JSON 的 md5，順序變了 md5 就對不上。
@@ -207,11 +222,13 @@ class LVRClient:
 
         js = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         digest = hashlib.md5(js.encode("utf-8")).hexdigest()
-        ct = cryptojs_encrypt(js, HOST)
-        import base64
-        q = base64.b64encode(ct.encode("utf-8")).decode("ascii")
-        url = f"{BASE}/SERVICE/QueryPrice/{digest}?q={urllib.parse.quote(q)}"
+        q = base64.b64encode(cryptojs_encrypt(js, HOST).encode("utf-8")).decode("ascii")
+        return f"{BASE}/SERVICE/QueryPrice/{digest}?q={urllib.parse.quote(q)}"
 
+    def query(self, **kw: Any) -> list[dict[str, Any]]:
+        """組 URL 並實際抓回來。回傳原始欄位的 list；用 normalize() 轉成好懂的 schema。"""
+        kw.setdefault("token", self._token())
+        url = self.build_url(**kw)
         time.sleep(self.delay)
         raw = self._get(url).decode("utf-8", "replace")
         if raw.lstrip().startswith("<"):
@@ -335,6 +352,8 @@ def main() -> int:
     ap.add_argument("--json", help="輸出檔（預設 stdout）")
     ap.add_argument("--raw", action="store_true", help="輸出原始欄位不正規化")
     ap.add_argument("--limit", type=int, default=0, help="只輸出前 N 筆")
+    ap.add_argument("--print-url", action="store_true",
+                    help="只印出查詢 URL，不發送請求（給沒有對外連線的環境用）")
     ap.add_argument("--list-cities", action="store_true")
     ap.add_argument("--list-towns", metavar="CITY")
     args = ap.parse_args()
@@ -358,9 +377,13 @@ def main() -> int:
     elif town and len(town) > 3:
         _, town = c.resolve(args.city, args.town)
 
-    rows = c.query(qry_type=args.type, city=city, town=town, start=args.start,
-                   end=args.end, ptype=args.ptype, ftype=args.ftype,
-                   doorno=args.doorno, community=args.community)
+    qkw = dict(qry_type=args.type, city=city, town=town, start=args.start,
+               end=args.end, ptype=args.ptype, ftype=args.ftype,
+               doorno=args.doorno, community=args.community)
+    if args.print_url:
+        print(c.build_url(**qkw))
+        return 0
+    rows = c.query(**qkw)
     out = rows if args.raw else [normalize(r, args.type) for r in rows]
     if args.limit:
         out = out[:args.limit]

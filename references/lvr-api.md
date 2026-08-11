@@ -27,12 +27,32 @@ GET /SERVICE/QueryPrice/{md5(json)}?q={base64(ciphertext)}
 
 ## 呼叫順序
 
+官網的做法是三步：
+
 1. `GET /` —— 拿 `JSESSIONID` cookie
-2. `GET /jsp/setToken.jsp` → `{"token":"RLS6462861443"}`，token 要放進 payload
-   （回 `"401"` 代表 session 失效，重新來一次）
+2. `GET /jsp/setToken.jsp` → `{"token":"RLS6462861443"}`，token 放進 payload
 3. `GET /SERVICE/QueryPrice/{md5}?q={q}` → JSON array
 
-同一個 session 可以重複查，但要保留 cookie。
+### 但 token 與 session 其實不會被驗證
+
+實測（2026-08）：**沒有 cookie、token 給空字串或亂編的值，三種 qryType 都照樣回
+完整結果**。
+
+| 測試 | 結果 |
+|---|---|
+| 無 cookie、`token: ""` | ✅ 174 筆 |
+| 無 cookie、`token: "XXX999999999"` | ✅ 174 筆 |
+| 無 cookie，buy / rent / presale 三種 | ✅ 424 / 508 / 70 筆 |
+
+也就是說 **QueryPrice 是完全無狀態的 GET**。這帶來兩個實務上的好處：
+
+- 不需要先打兩個請求暖身，少一次往返也少一個失效點（`lvr.py` 的 `_token()` 因此
+  改成 best-effort：拿得到就帶，拿不到就用空字串，不讓整個查詢失敗）。
+- **URL 算好之後，誰去抓都可以。** 加密與 MD5 都是純運算不需要網路，所以在沒有
+  對外連線的環境（claude.ai 沙箱、CI）可以先在本地算出 URL，再交給有網路的一方
+  去抓。`lvr.py --print-url` 就是做這件事。
+
+不要因此把請求打得很兇 —— 無狀態不代表沒有速率限制。
 
 > 註：前端有 `if (window.navigator.webdriver) return;` 擋自動化瀏覽器；
 > 直接走 HTTP 不受影響。
