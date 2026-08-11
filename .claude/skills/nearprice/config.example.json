@@ -55,5 +55,5 @@
   },
 
   "lvr_geocode_years": 3,
-  "nominatim_user_agent": "tw-realprice-skill/1.0"
+  "nominatim_user_agent": "nearprice/1.0"
 }

@@ -78,9 +78,9 @@ python3 "$SKILL/scripts/geocode.py" --doctor
 
 先找到哪個就用哪個：
 
-1. `$TWRP_CONFIG` 環境變數指到的檔
-2. `.claude/skills/tw-realprice/config.json`
-3. `~/.config/tw-realprice/config.json`
+1. `$NEARPRICE_CONFIG` 環境變數指到的檔
+2. `.claude/skills/nearprice/config.json`
+3. `~/.config/nearprice/config.json`
 
 `config.example.json` 是可直接複製的範本。
 
@@ -129,7 +129,7 @@ printf 'LOCUS_API_KEY=你的金鑰\n' > "$SKILL/.env" && chmod 600 "$SKILL/.env"
 # C. 直接寫進 config.json 的 locus.api_key
 ```
 
-`.env` 找的位置是 `$SKILL/.env` 與 `~/.config/tw-realprice/.env`，格式一行一個
+`.env` 找的位置是 `$SKILL/.env` 與 `~/.config/nearprice/.env`，格式一行一個
 `KEY=value`（`export ` 前綴、引號都會被忽略）。三者都已列入 `.gitignore`。
 
 ### 請求 / 回應（2026-08 實測）

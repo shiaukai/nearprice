@@ -14,9 +14,9 @@ provider 依序嘗試（可在設定檔用 "providers" 指定順序或只留一�
   nominatim  OpenStreetMap。台灣只到「路/段」層級，查不到門牌號，當最後手段。
 
 設定檔位置（先找到的先用）：
-  $TWRP_CONFIG
-  ./.claude/skills/tw-realprice/config.json
-  ~/.config/tw-realprice/config.json
+  $NEARPRICE_CONFIG
+  ./.claude/skills/nearprice/config.json
+  ~/.config/nearprice/config.json
 
 custom provider 的設定長這樣：
 
@@ -68,9 +68,9 @@ class GeocodeError(RuntimeError):
 # --- 設定 -----------------------------------------------------------------
 
 def load_config() -> dict[str, Any]:
-    for p in [os.environ.get("TWRP_CONFIG"),
+    for p in [os.environ.get("NEARPRICE_CONFIG"),
               SKILL_DIR / "config.json",
-              Path.home() / ".config" / "tw-realprice" / "config.json"]:
+              Path.home() / ".config" / "nearprice" / "config.json"]:
         if p and Path(p).is_file():
             try:
                 return json.loads(Path(p).read_text(encoding="utf-8"))
@@ -85,7 +85,7 @@ def _dotenv(name: str) -> str:
     需要這層是因為：Claude / 腳本跑在**非互動 shell**，zsh 只會 source `~/.zshenv`，
     不會 source `~/.zshrc` —— 金鑰寫在 `.zshrc` 裡的話，手動跑得起來、自動跑卻 401。
     """
-    for p in [SKILL_DIR / ".env", Path.home() / ".config" / "tw-realprice" / ".env"]:
+    for p in [SKILL_DIR / ".env", Path.home() / ".config" / "nearprice" / ".env"]:
         if not p.is_file():
             continue
         for line in p.read_text(encoding="utf-8").splitlines():
@@ -505,7 +505,7 @@ def _nominatim(addr: str, cfg: dict[str, Any]) -> dict[str, Any] | None:
     q = f"{p['road']}{p['section']}段, {p['town']}, {p['city']}" if p["road"] else addr
     url = "https://nominatim.openstreetmap.org/search?" + urllib.parse.urlencode(
         {"format": "jsonv2", "limit": 1, "countrycodes": "tw", "q": q})
-    ua = cfg.get("nominatim_user_agent", "tw-realprice-skill/1.0")
+    ua = cfg.get("nominatim_user_agent", "nearprice/1.0")
     data = json.loads(_http(url, headers={"User-Agent": ua}))
     if not data:
         return None
@@ -621,9 +621,9 @@ def doctor(cfg: dict[str, Any]) -> int:
 
 
 def _config_path() -> str:
-    for p in [os.environ.get("TWRP_CONFIG"),
+    for p in [os.environ.get("NEARPRICE_CONFIG"),
               SKILL_DIR / "config.json",
-              Path.home() / ".config" / "tw-realprice" / "config.json"]:
+              Path.home() / ".config" / "nearprice" / "config.json"]:
         if p and Path(p).is_file():
             return str(p)
     return ""

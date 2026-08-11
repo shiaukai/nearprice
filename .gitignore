@@ -2,7 +2,7 @@
 .env
 *.env
 !*.env.example
-.claude/skills/tw-realprice/config.json
+.claude/skills/nearprice/config.json
 
 # 個人的本機設定
 .claude/settings.local.json

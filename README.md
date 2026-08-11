@@ -1,4 +1,4 @@
-# tw-realprice — 台灣不動產行情查詢 skill
+# nearprice — 台灣不動產行情查詢 skill
 
 給一個地址，一次拿到三種價格：
 
@@ -19,7 +19,7 @@
 這個專案改走官網的即時查詢 API —— 它**每一筆都回傳 lat/lon**，半徑搜尋因此才做得成。
 API 的查詢條件是用 CryptoJS AES 加密塞在 query string 裡，passphrase 就是
 `window.location.host`。完整的逆向規格（加密流程、參數順序、代碼表、回應欄位、
-官網改版時的排查步驟）寫在 [`references/lvr-api.md`](.claude/skills/tw-realprice/references/lvr-api.md)。
+官網改版時的排查步驟）寫在 [`references/lvr-api.md`](.claude/skills/nearprice/references/lvr-api.md)。
 
 ## 安裝
 
@@ -28,14 +28,14 @@ Python 實作（macOS 內建的 python3 是 externally-managed，不該為了查
 
 ```bash
 git clone <this-repo> && cd <this-repo>
-cp .claude/skills/tw-realprice/config.example.json .claude/skills/tw-realprice/config.json
-cp .claude/skills/tw-realprice/.env.example       .claude/skills/tw-realprice/.env
+cp .claude/skills/nearprice/config.example.json .claude/skills/nearprice/config.json
+cp .claude/skills/nearprice/.env.example       .claude/skills/nearprice/.env
 ```
 
 編輯 `.env` 填入 `GOOGLE_MAPS_API_KEY`，然後確認設定：
 
 ```bash
-python3 .claude/skills/tw-realprice/scripts/geocode.py --doctor
+python3 .claude/skills/nearprice/scripts/geocode.py --doctor
 ```
 
 `--doctor` 不會發出任何網路請求，只列出每個 provider 的狀態。
@@ -55,21 +55,21 @@ skill 本身不執行任何東西，它是一份 Markdown 說明 + 一包腳本�
 幫我查 台北市大安區忠孝東路四段45號 附近的行情
 ```
 
-或直接 `/tw-realprice <地址>`。新增 skill 後要開新的 session 才會被掃到。
+或直接 `/nearprice <地址>`。新增 skill 後要開新的 session 才會被掃到。
 
 想在任何專案都能用，就 symlink 到全域（`.env` 會跟著 symlink 走）：
 
 ```bash
-mkdir -p ~/.claude/skills && ln -s "$PWD/.claude/skills/tw-realprice" ~/.claude/skills/tw-realprice
+mkdir -p ~/.claude/skills && ln -s "$PWD/.claude/skills/nearprice" ~/.claude/skills/nearprice
 ```
 
 ### 純 CLI
 
 ```bash
 mkdir -p out
-python3 .claude/skills/tw-realprice/scripts/nearby.py "台北市大安區忠孝東路四段45號" \
+python3 .claude/skills/nearprice/scripts/nearby.py "台北市大安區忠孝東路四段45號" \
   --radius 500 --months 24 --json out/nearby.json
-python3 .claude/skills/tw-realprice/scripts/report.py out/nearby.json --html out/report.html
+python3 .claude/skills/nearprice/scripts/report.py out/nearby.json --html out/report.html
 open out/report.html
 ```
 
@@ -104,7 +104,7 @@ python3 .../scripts/geocode.py "台北市大安區忠孝東路四段45號"
 | `lvr` | 門牌附近 | **免費、零設定** | 保底方案，長路段會失準 |
 | `nominatim` | 路段 | 免費 | 最後手段，誤差數百公尺 |
 
-設定細節見 [`references/geocoding.md`](.claude/skills/tw-realprice/references/geocoding.md)。
+設定細節見 [`references/geocoding.md`](.claude/skills/nearprice/references/geocoding.md)。
 
 ## 金鑰放哪
 
@@ -119,7 +119,7 @@ python3 .../scripts/geocode.py "台北市大安區忠孝東路四段45號"
 ## 專案結構
 
 ```
-.claude/skills/tw-realprice/
+.claude/skills/nearprice/
 ├── SKILL.md                    Claude 讀的流程說明
 ├── config.example.json         複製成 config.json
 ├── .env.example                複製成 .env 填金鑰

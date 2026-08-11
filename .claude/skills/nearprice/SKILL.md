@@ -1,5 +1,5 @@
 ---
-name: tw-realprice
+name: nearprice
 description: 查台灣不動產行情 —— 給一個地址，回傳附近的內政部實價登錄成交（買賣/租賃/預售屋）與各大房仲網站的現售、出租開價，並產出 HTML 視覺化報告。當使用者提到「實價登錄」、「這附近房價多少」、「行情」、「這間房子貴不貴」、「租金行情」、「議價空間」、「租金報酬率」，或給了一個台灣地址想知道週邊成交價／開價時使用。
 ---
 
@@ -104,8 +104,8 @@ python3 "$SKILL/scripts/geocode.py" --doctor
 python3 "$SKILL/scripts/geocode.py" "台北市大安區忠孝東路四段45號"
 ```
 
-設定檔找的順序是 `$TWRP_CONFIG` → `$SKILL/config.json` → `~/.config/tw-realprice/config.json`。
-skill 目錄若不可寫，就把設定放 `~/.config/tw-realprice/config.json`。
+設定檔找的順序是 `$NEARPRICE_CONFIG` → `$SKILL/config.json` → `~/.config/nearprice/config.json`。
+skill 目錄若不可寫，就把設定放 `~/.config/nearprice/config.json`。
 
 ## 房仲網站抓不到的時候
 
