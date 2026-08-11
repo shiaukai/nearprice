@@ -311,6 +311,15 @@ def normalize(rec: dict[str, Any], qry_type: str = BIZ) -> dict[str, Any]:
 
 # --- CLI ------------------------------------------------------------------
 
+def _write(path: str, text: str) -> None:
+    """寫檔並自動建立上層目錄 —— 使用者照著 README 打 `--json out/x.json`
+    時，out/ 通常還不存在，不該因此炸掉。"""
+    p = Path(path)
+    if p.parent != Path(""):
+        p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="utf-8")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="內政部實價登錄即時查詢")
     ap.add_argument("--city", help="縣市代碼(A) 或中文(臺北市)")
@@ -357,7 +366,7 @@ def main() -> int:
         out = out[:args.limit]
     text = json.dumps(out, ensure_ascii=False, indent=2)
     if args.json:
-        Path(args.json).write_text(text, encoding="utf-8")
+        _write(args.json, text)
         print(f"{len(out)} 筆 → {args.json}", file=sys.stderr)
     else:
         print(text)

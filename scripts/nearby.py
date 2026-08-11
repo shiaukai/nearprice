@@ -178,6 +178,15 @@ def rent_yield(summary: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _write(path: str, text: str) -> None:
+    """寫檔並自動建立上層目錄 —— 使用者照著 README 打 `--json out/x.json`
+    時，out/ 通常還不存在，不該因此炸掉。"""
+    p = Path(path)
+    if p.parent != Path(""):
+        p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="utf-8")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="地址 → 附近行情（實價登錄 + 現售/租賃開價）")
     ap.add_argument("address")
@@ -235,7 +244,7 @@ def main() -> int:
     }
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.json:
-        Path(args.json).write_text(text, encoding="utf-8")
+        _write(args.json, text)
         print(f"→ {args.json}", file=sys.stderr)
     else:
         print(text)

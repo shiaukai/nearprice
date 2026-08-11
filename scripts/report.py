@@ -439,13 +439,22 @@ def build(data: dict[str, Any]) -> str:
             f'<body class="viz-root">{"".join(p)}</body></html>')
 
 
+def _write(path: str, text: str) -> None:
+    """寫檔並自動建立上層目錄 —— 使用者照著 README 打 `--json out/x.json`
+    時，out/ 通常還不存在，不該因此炸掉。"""
+    p = Path(path)
+    if p.parent != Path(""):
+        p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="utf-8")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="nearby.py 的 JSON → HTML 報告")
     ap.add_argument("json_file")
     ap.add_argument("--html", default="report.html")
     args = ap.parse_args()
     data = json.loads(Path(args.json_file).read_text(encoding="utf-8"))
-    Path(args.html).write_text(build(data), encoding="utf-8")
+    _write(args.html, build(data))
     print(f"→ {args.html}", file=sys.stderr)
     return 0
 

@@ -31,6 +31,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zlib
+from pathlib import Path
 from typing import Any, Callable
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -377,6 +378,15 @@ def collect(city: str, town: str = "", sites: list[str] | None = None,
     return rows, errors
 
 
+def _write(path: str, text: str) -> None:
+    """寫檔並自動建立上層目錄 —— 使用者照著 README 打 `--json out/x.json`
+    時，out/ 通常還不存在，不該因此炸掉。"""
+    p = Path(path)
+    if p.parent != Path(""):
+        p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="utf-8")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="房仲網站現售/租賃開價抓取")
     ap.add_argument("--city", required=True)
@@ -393,8 +403,7 @@ def main() -> int:
                "資料": rows, "失敗": errors}
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.json:
-        from pathlib import Path
-        Path(args.json).write_text(text, encoding="utf-8")
+        _write(args.json, text)
         print(f"{len(rows)} 筆 → {args.json}", file=sys.stderr)
     else:
         print(text)
