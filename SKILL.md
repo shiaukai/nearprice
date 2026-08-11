@@ -10,15 +10,16 @@ description: 查台灣不動產行情 —— 給一個地址，回傳附近的�
 
 ## 路徑約定
 
-底下所有指令裡的 `$SKILL` 是**這個 skill 的 base directory**（載入 skill 時會告訴你）。
-執行前先設好，之後照抄即可：
+底下所有指令裡的 `$SKILL` 是**這個 skill 的 base directory**（載入 skill 時會告訴你，
+通常是 `~/.claude/skills/nearprice`）。執行前先設好，之後照抄即可：
 
 ```bash
 SKILL="<載入時給的 base directory>"
 ```
 
 輸出檔放在使用者目前工作目錄下的 `out/`（不存在就 `mkdir -p out`）。
-`$SKILL` 底下不要寫入 —— skill 目錄可能是唯讀或被共用的。
+`$SKILL` 底下不要寫入 —— 那是 git working tree，寫進去會污染 `git status`，
+而且 skill 目錄可能是唯讀或被共用的。
 
 ## 一句話用法
 

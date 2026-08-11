@@ -2,12 +2,9 @@
 .env
 *.env
 !*.env.example
-.claude/skills/nearprice/config.json
+config.json
 
-# 個人的本機設定
-.claude/settings.local.json
-
-# 查詢輸出
+# 查詢輸出（腳本預設寫到使用者 cwd 的 out/，但以防有人在 repo 內跑）
 out/
 
 # Python

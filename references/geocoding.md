@@ -79,7 +79,7 @@ python3 "$SKILL/scripts/geocode.py" --doctor
 先找到哪個就用哪個：
 
 1. `$NEARPRICE_CONFIG` 環境變數指到的檔
-2. `.claude/skills/nearprice/config.json`
+2. `config.json`
 3. `~/.config/nearprice/config.json`
 
 `config.example.json` 是可直接複製的範本。

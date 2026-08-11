@@ -15,7 +15,7 @@ provider 依序嘗試（可在設定檔用 "providers" 指定順序或只留一�
 
 設定檔位置（先找到的先用）：
   $NEARPRICE_CONFIG
-  ./.claude/skills/nearprice/config.json
+  ./config.json
   ~/.config/nearprice/config.json
 
 custom provider 的設定長這樣：
