@@ -1,6 +1,8 @@
 ---
 name: nearprice
 description: 查台灣不動產行情 —— 給一個地址，回傳附近的內政部實價登錄成交（買賣/租賃/預售屋）與各大房仲網站的現售、出租開價，並產出 HTML 視覺化報告。當使用者提到「實價登錄」、「這附近房價多少」、「行情」、「這間房子貴不貴」、「租金行情」、「議價空間」、「租金報酬率」，或給了一個台灣地址想知道週邊成交價／開價時使用。
+license: MIT
+allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/nearby.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/report.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/lvr.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/geocode.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/listings.py:*)
 ---
 
 # 台灣不動產行情查詢
@@ -8,23 +10,27 @@ description: 查台灣不動產行情 —— 給一個地址，回傳附近的�
 給一個地址，一次拿到三種價格：**已成交**（內政部實價登錄）、**現在賣方要價**、
 **現在房東要價**。三者一起看才知道行情、議價空間與租金報酬率。
 
+## 引數
+
+`$ARGUMENTS`
+
+上面這行是使用者用 `/nearprice <地址>` 呼叫時帶的引數。有值就當作查詢地址
+（後面可以跟 `--radius`／`--months` 之類的選項，照傳即可）；空白就照下面的流程
+先問使用者要查哪個地址。
+
 ## 路徑約定
 
-底下所有指令裡的 `$SKILL` 是**這個 skill 的 base directory**（載入 skill 時會告訴你，
-通常是 `~/.claude/skills/nearprice`）。執行前先設好，之後照抄即可：
+`${CLAUDE_SKILL_DIR}` 會被自動代換成這個 skill 的所在目錄，**直接照抄即可，
+不需要自己設變數**。
 
-```bash
-SKILL="<載入時給的 base directory>"
-```
-
-輸出檔放在使用者目前工作目錄下的 `out/`（不存在就 `mkdir -p out`）。
-`$SKILL` 底下不要寫入 —— 那是 git working tree，寫進去會污染 `git status`，
-而且 skill 目錄可能是唯讀或被共用的。
+輸出檔放在使用者目前工作目錄下的 `out/`（腳本會自己建目錄）。
+`${CLAUDE_SKILL_DIR}` 底下不要寫入 —— 那是 git working tree，寫進去會污染
+`git status`，而且 skill 目錄可能是唯讀或被共用的。
 
 ## 一句話用法
 
 ```bash
-mkdir -p out && python3 "$SKILL/scripts/nearby.py" "台北市大安區忠孝東路四段45號" --json out/nearby.json && python3 "$SKILL/scripts/report.py" out/nearby.json --html out/report.html
+python3 ${CLAUDE_SKILL_DIR}/scripts/nearby.py "台北市大安區忠孝東路四段45號" --json out/nearby.json && python3 ${CLAUDE_SKILL_DIR}/scripts/report.py out/nearby.json --html out/report.html
 ```
 
 跑完會有兩個檔：`out/nearby.json`（結構化資料）與 `out/report.html`（可分享的報告）。
@@ -37,14 +43,14 @@ mkdir -p out && python3 "$SKILL/scripts/nearby.py" "台北市大安區忠孝東�
 2. **跑 `nearby.py`**。預設半徑 500 公尺、回溯 24 個月。使用者說「附近」通常指走路
    距離，300–500m 合適；郊區或案件稀少時放寬到 1000m。
    ```bash
-   python3 "$SKILL/scripts/nearby.py" "<地址>" --radius 500 --months 24 --json out/nearby.json
+   python3 ${CLAUDE_SKILL_DIR}/scripts/nearby.py "<地址>" --radius 500 --months 24 --json out/nearby.json
    ```
    這一步會打十幾次網路請求（含 sleep），一個地址大約要 30–60 秒，是正常的。
    stderr 會印出每個階段的筆數；**半徑內筆數 < 20 就該放寬半徑或月數再跑一次**，
    否則中位數沒有代表性。
 3. **產 HTML 報告**，然後用 SendUserFile 把 `out/report.html` 給使用者看。
    ```bash
-   python3 "$SKILL/scripts/report.py" out/nearby.json --html out/report.html
+   python3 ${CLAUDE_SKILL_DIR}/scripts/report.py out/nearby.json --html out/report.html
    ```
 4. **在對話裡講重點**，不要叫使用者自己去讀報告。至少講：
    - 買賣單價中位數與 P25–P75 區間（**永遠講中位數，不要講平均** —— 實登單價會被
@@ -70,7 +76,7 @@ mkdir -p out && python3 "$SKILL/scripts/nearby.py" "台北市大安區忠孝東�
 單獨查一個行政區的實登（不做半徑篩選）：
 
 ```bash
-python3 "$SKILL/scripts/lvr.py" --city 台北市 --town 大安區 --type biz --start 114/1 --end 115/7 --ftype 05
+python3 ${CLAUDE_SKILL_DIR}/scripts/lvr.py --city 台北市 --town 大安區 --type biz --start 114/1 --end 115/7 --ftype 05
 ```
 
 `--type` 可用 `biz`(買賣) / `rent`(租賃) / `sale`(預售屋) / `saleRemark`(預售建案備查)。
@@ -82,7 +88,7 @@ python3 "$SKILL/scripts/lvr.py" --city 台北市 --town 大安區 --type biz --s
 不發請求也不產生費用**。想知道目前狀態就跑（不會發任何請求）：
 
 ```bash
-python3 "$SKILL/scripts/geocode.py" --doctor
+python3 ${CLAUDE_SKILL_DIR}/scripts/geocode.py --doctor
 ```
 
 - **`google`** —— Google Geocoding API，**一般使用者的主力**。門牌級精度。
@@ -102,10 +108,10 @@ python3 "$SKILL/scripts/geocode.py" --doctor
 單獨測定位：
 
 ```bash
-python3 "$SKILL/scripts/geocode.py" "台北市大安區忠孝東路四段45號"
+python3 ${CLAUDE_SKILL_DIR}/scripts/geocode.py "台北市大安區忠孝東路四段45號"
 ```
 
-設定檔找的順序是 `$NEARPRICE_CONFIG` → `$SKILL/config.json` → `~/.config/nearprice/config.json`。
+設定檔找的順序是 `$NEARPRICE_CONFIG` → `${CLAUDE_SKILL_DIR}/config.json` → `~/.config/nearprice/config.json`。
 skill 目錄若不可寫，就把設定放 `~/.config/nearprice/config.json`。
 
 ## 房仲網站抓不到的時候

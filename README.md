@@ -110,11 +110,20 @@ $ python3 scripts/geocode.py --doctor
 skill 本身不執行任何東西，它是一份 Markdown 說明 + 一包腳本；跑 Python 的是 Claude，
 它讀 `SKILL.md` 之後用 Bash 執行 `scripts/` 底下的腳本。
 
+**兩種呼叫方式**——講人話讓 Claude 自己判斷，或用斜線指令直接叫：
+
 ```
 幫我查 台北市大安區忠孝東路四段45號 附近的行情
 ```
+```
+/nearprice 台北市大安區忠孝東路四段45號
+/nearprice 新北市板橋區文化路一段266號 --radius 800 --months 36
+```
 
-或直接 `/nearprice <地址>`。
+斜線指令是 skill 自動產生的（Claude Code 已把 custom commands 併進 skills，
+`SKILL.md` 的 `name` 就是指令名），不需要另外寫 `.claude/commands/` 檔案。
+
+`SKILL.md` 的 `allowed-tools` 有預先授權這些腳本，所以跑起來不會一直跳權限確認。
 
 ### 純 CLI
 
