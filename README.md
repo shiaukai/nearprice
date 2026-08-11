@@ -154,20 +154,42 @@ sale.591.com.tw  rent.591.com.tw  www.sinyi.com.tw  buy.yungching.com.tw
 - `${CLAUDE_SKILL_DIR}` 是 Claude Code 專屬的代換，在 claude.ai 會是字面文字。
   `SKILL.md` 已經寫了 fallback 指示，但體驗不如 Claude Code。
 
-#### 沙箱沒網路時的變通做法
+#### 接力模式：沙箱沒網路也能用
 
-要注意「Claude 自己的瀏覽工具」和「程式碼沙箱」是兩套不同的網路 —— 前者連得到
-內政部，後者預設連不到。而實登的查詢請求是**無狀態的 GET**，加密與雜湊都是純運算，
-所以可以拆成兩半：
+**這條路已經實作好了**，`SKILL.md` 會自動判斷要走哪一種。
+
+關鍵在於「Claude 自己的瀏覽工具」和「程式碼沙箱」是兩套不同的網路——前者連得到
+內政部，後者預設連不到。而實登的 QueryPrice 是**無狀態的 GET**（不驗證 token 或
+session），加密與雜湊又都是純運算，所以工作可以拆成兩半：
 
 ```bash
-# 這一步不需要網路，在沙箱裡算就好
-python3 scripts/lvr.py --city A --town A02 --type biz --start 115/1 --end 115/3 --ftype 05 --print-url
+# 0. 先判斷環境（打一個小請求）
+python3 scripts/relay.py check
+
+# 1. 算出要抓哪些 URL —— 不連網
+python3 scripts/relay.py plan "台北市大安區忠孝東路四段45號" --months 24 --town-code A02
+
+# 2. 由有網路的一方抓那三個 URL，存成 biz.json / rent.json / sale.json
+
+# 3. 合併＋統計 —— 不連網，輸出格式跟直連模式完全一樣
+python3 scripts/relay.py build "台北市大安區忠孝東路四段45號" \
+  --biz biz.json --rent rent.json --sale sale.json --radius 500 --json out/nearby.json
+python3 scripts/report.py out/nearby.json --html out/report.html
 ```
 
-把印出來的 URL 交給有網路的一方（chat 裡就是 Claude 的網頁抓取工具）去抓，
-回來的就是完整 JSON。定位改用 `lvr` 備援（同樣是這條路），房仲開價則直接讓 Claude
-去讀各站的搜尋頁。這樣在 chat 裡也能得到結果，只是要多幾步、且資料量大時會吃 context。
+圓心從抓回來的紀錄裡挑門牌最接近的一筆推出來，不需要另外 geocode。
+
+實測兩種模式的結果（大安區忠孝東路四段45號、半徑 400m、近 12 個月）：
+
+| | 接力模式 | 直連模式 |
+|---|---|---|
+| 定位 | `lvr` 估算 | `locus` 門牌級 |
+| 買賣 | 174 筆・中位數 108.15 | 175 筆・中位數 106.51 |
+| 租賃 | 165 筆・中位數 2466 | 185 筆・中位數 2588 |
+| 預售屋 | 17 筆・中位數 206.68 | 17 筆・中位數 206.68 |
+
+差異來自定位精度（兩者相距 65 公尺，半徑邊緣有幾筆進出）。接力模式另外**沒有房仲
+開價**，所以看不到議價空間——需要的話讓 Claude 去讀各站搜尋頁再補進 JSON。
 
 本專案的 frontmatter 只用 Agent Skills spec 允許的欄位，所以打包上傳不會因為
 未知欄位而報錯。要打包成可上傳的 zip：
@@ -248,6 +270,8 @@ nearprice/                      ← clone 到 ~/.claude/skills/nearprice
     ├── lvr.py                  內政部實登即時查詢 client
     ├── geocode.py              地址 → 座標（可插拔 provider）
     ├── listings.py             房仲網站開價抓取
+    ├── relay.py                接力模式（沙箱沒網路時用）
+    ├── package.sh              打包成 claude.ai 可上傳的 zip
     └── twcrypto.py             CryptoJS 相容 AES（純 stdlib）
 ```
 

@@ -2,7 +2,7 @@
 name: nearprice
 description: 查台灣不動產行情 —— 給一個地址，回傳附近的內政部實價登錄成交（買賣/租賃/預售屋）與各大房仲網站的現售、出租開價，並產出 HTML 視覺化報告。當使用者提到「實價登錄」、「這附近房價多少」、「行情」、「這間房子貴不貴」、「租金行情」、「議價空間」、「租金報酬率」，或給了一個台灣地址想知道週邊成交價／開價時使用。
 license: MIT
-allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/nearby.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/report.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/lvr.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/geocode.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/listings.py:*)
+allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/nearby.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/report.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/lvr.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/geocode.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/listings.py:*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/relay.py:*)
 ---
 
 # 台灣不動產行情查詢
@@ -31,9 +31,24 @@ allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/nearby.py:*), Bash(pytho
 `${CLAUDE_SKILL_DIR}` 底下不要寫入 —— 那是 git working tree，寫進去會污染
 `git status`，而且 skill 目錄可能是唯讀或被共用的。
 
+## 先決定走哪條路徑
+
+這個 skill 有兩種模式。**開始前先跑一次**（很快，只打一個小請求）：
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/relay.py check
+```
+
+- **回「有對外連線」→ 走路徑 A**（下面的「標準流程」）。Claude Code 幾乎都是這個。
+- **回「連不到」→ 走路徑 B**（接力模式，見最後一節）。claude.ai / Cowork 的
+  程式碼沙箱有網域白名單，預設連不到內政部。
+
+不要在路徑 A 失敗後才反覆重試 —— 連線被沙箱擋掉和官網改版的症狀很像，
+但處理方式完全不同。先 `check` 就不會誤判。
+
 ## 需要對外連線
 
-這個 skill 的每一項功能都要打外網。**沙箱環境若沒開對應網域，會全部失敗**：
+路徑 A 的每一項功能都要打外網。**沙箱環境若沒開對應網域，會全部失敗**：
 
 | 網域 | 用途 | 沒有的話 |
 |---|---|---|
@@ -45,7 +60,7 @@ allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/nearby.py:*), Bash(pytho
 | `buy.yungching.com.tw` | 永慶開價 | 少這個來源 |
 
 若查詢一直失敗且錯誤是連線逾時或被拒，先確認是不是網路被沙箱擋掉，
-不要往 API 改版的方向排查。
+不要往 API 改版的方向排查。**這種情況改走路徑 B，不要放棄。**
 
 ## 一句話用法
 
@@ -89,6 +104,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/nearby.py "台北市大安區忠孝東路四
 | `scripts/lvr.py` | 內政部實價登錄即時查詢，可單獨用（查整區、查社區、查路名） |
 | `scripts/geocode.py` | 地址 → 座標，可插拔 provider |
 | `scripts/listings.py` | 591 / 信義 / 永慶 的現售與出租開價 |
+| `scripts/relay.py` | 接力模式：沙箱沒網路時的 check / plan / build |
 | `scripts/twcrypto.py` | 純 Python 的 CryptoJS 相容 AES（實登 API 要用） |
 
 全部只用 Python 標準函式庫，**不需要 pip install 任何東西**。
@@ -163,6 +179,56 @@ schema 欄位：
 - 租金報酬率是用中位數推估的粗估值，沒扣稅、管理費與空置期，不能當投資建議。
 - 內政部的查詢 API 是從官網前端逆向來的（見 `references/lvr-api.md`），
   官網改版就可能失效。失效時的判斷與修復步驟寫在該文件末尾。
+
+## 路徑 B：接力模式（沙箱沒有對外連線時）
+
+關鍵事實：**實登的 QueryPrice 是無狀態 GET**（不驗證 token 或 session），而加密與
+雜湊都是純運算。所以可以把工作拆成「沙箱裡算」與「你用網頁抓取工具去抓」兩半 ——
+即使沙箱連不到內政部，**你自己的抓取工具連得到**。
+
+### 步驟
+
+**1. 取得鄉鎮代碼。** 無網路時查不到代碼表，用你的網頁抓取工具讀
+`https://lvr.land.moi.gov.tw/SERVICE/CITY/{縣市代碼}`
+（縣市代碼：A 臺北 F 新北 H 桃園 B 臺中 D 臺南 E 高雄 C 基隆 O 新竹市 J 新竹縣
+K 苗栗 M 南投 N 彰化 P 雲林 I 嘉義市 Q 嘉義縣 T 屏東 G 宜蘭 U 花蓮 V 臺東
+X 澎湖 W 金門 Z 連江）。
+
+**2. 算出要抓的 URL**（不連網）：
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/relay.py plan "<地址>" --months 24 --town-code A02
+```
+
+會印出三個 URL（買賣／租賃／預售屋）與對應的檔名。
+
+**3. 用你的網頁抓取工具逐一抓那三個 URL**，把回應**原封不動**存成
+`biz.json` / `rent.json` / `sale.json`。回應是 JSON 陣列，前後有多餘文字沒關係，
+`build` 會自己切出來。
+
+> 資料量會很大（一個行政區一年可能上千筆、數 MB）。**不要把整包 JSON 讀進 context**，
+> 直接寫成檔案交給下一步。真的太大就縮小 `--months`，或加 `--ftype 05` 只看住宅大樓。
+
+**4. 合併＋統計**（不連網，輸出格式跟路徑 A 完全一樣）：
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/relay.py build "<地址>" \
+  --biz biz.json --rent rent.json --sale sale.json \
+  --radius 500 --months 24 --json out/nearby.json
+python3 ${CLAUDE_SKILL_DIR}/scripts/report.py out/nearby.json --html out/report.html
+```
+
+圓心是從抓回來的紀錄裡挑門牌最接近的一筆推出來的，不需要另外 geocode。
+
+**5. 報告**：能傳檔案就傳 `out/report.html`；不能的話讀進來當 artifact 呈現。
+講重點的要求跟路徑 A 一樣。
+
+### 路徑 B 的限制，要主動告訴使用者
+
+- **定位是估算的**（同路段最近成交案件反推），長路段誤差可達 1 公里以上。
+- **沒有房仲開價**，所以看不到議價空間。需要的話用網頁抓取工具讀 591／信義／永慶的
+  搜尋頁，整理成 `references/listings.md` 裡的 schema，補進 `nearby.json` 的
+  `市場開價.資料` 後重跑 `report.py`。
 
 ## 參考文件
 

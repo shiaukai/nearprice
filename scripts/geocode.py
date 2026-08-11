@@ -457,12 +457,24 @@ def _lvr(addr: str, cfg: dict[str, Any]) -> dict[str, Any] | None:
     if not rows:
         return None
 
+    return center_from_lvr_rows(addr, rows)
+
+
+def center_from_lvr_rows(addr: str, rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """從一批實登原始紀錄裡挑出最接近目標門牌的那一筆，用它的座標當圓心。
+
+    比對成本：|門牌號差| 為主，巷號對不上加罰。段別不同直接排除。
+    這段抽出來是為了讓「已經抓好資料、只是沒有網路」的情境也能定位 ——
+    relay.py 走的就是這條。
+    """
+    p = parse_address(addr)
+    if not p["road"]:
+        return None
     want_sec = _cn2int(p["section"])
     want_no = int(p["number"]) if p["number"].isdigit() else None
     best, best_cost = None, 1e18
     for r in rows:
-        a = str(r.get("a") or "")
-        a = a.split("#", 1)[-1]
+        a = str(r.get("a") or "").split("#", 1)[-1]
         if p["road"] not in a:
             continue
         got_sec = _cn2int(_f1(r"([一二三四五六七八九十]+)段", a))
@@ -486,7 +498,8 @@ def _lvr(addr: str, cfg: dict[str, Any]) -> dict[str, Any] | None:
     return {"lat": float(best["lat"]), "lon": float(best["lon"]), "provider": "lvr",
             "precision": "門牌附近（同路段最近成交案件）",
             "score": round(best_cost, 1),
-            "matched": str(best.get("a") or "").split("#")[-1]}
+            "matched": str(best.get("a") or "").split("#")[-1],
+            "address": addr, "parsed": p}
 
 
 def _f1(pattern: str, text: str) -> str:
