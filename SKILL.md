@@ -23,9 +23,29 @@ allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/nearby.py:*), Bash(pytho
 `${CLAUDE_SKILL_DIR}` 會被自動代換成這個 skill 的所在目錄，**直接照抄即可，
 不需要自己設變數**。
 
+> 若你看到的是字面上的 `${CLAUDE_SKILL_DIR}` 而不是一個真實路徑，代表目前的執行環境
+> 不支援這個代換（Claude Code 以外的介面）。這時改用 `SKILL.md` 所在的那個目錄，
+> 例如 `find / -name SKILL.md -path '*nearprice*'` 找到後用它的上層目錄。
+
 輸出檔放在使用者目前工作目錄下的 `out/`（腳本會自己建目錄）。
 `${CLAUDE_SKILL_DIR}` 底下不要寫入 —— 那是 git working tree，寫進去會污染
 `git status`，而且 skill 目錄可能是唯讀或被共用的。
+
+## 需要對外連線
+
+這個 skill 的每一項功能都要打外網。**沙箱環境若沒開對應網域，會全部失敗**：
+
+| 網域 | 用途 | 沒有的話 |
+|---|---|---|
+| `lvr.land.moi.gov.tw` | 內政部實價登錄 | **整個 skill 無法運作** |
+| `maps.googleapis.com` | Google 定位 | 退到 `lvr` 備援定位 |
+| `nominatim.openstreetmap.org` | 備援定位 | 少一層備援 |
+| `sale.591.com.tw` `rent.591.com.tw` | 591 開價 | 少這個來源 |
+| `www.sinyi.com.tw` | 信義開價 | 少這個來源 |
+| `buy.yungching.com.tw` | 永慶開價 | 少這個來源 |
+
+若查詢一直失敗且錯誤是連線逾時或被拒，先確認是不是網路被沙箱擋掉，
+不要往 API 改版的方向排查。
 
 ## 一句話用法
 

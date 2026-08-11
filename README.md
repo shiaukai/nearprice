@@ -125,6 +125,42 @@ skill 本身不執行任何東西，它是一份 Markdown 說明 + 一包腳本�
 
 `SKILL.md` 的 `allowed-tools` 有預先授權這些腳本，所以跑起來不會一直跳權限確認。
 
+### 能裝在 claude.ai / Cowork 嗎？
+
+技術上可以，但**預設會跑不動**——這個 skill 的每一項功能都要打外網，而 claude.ai
+的程式碼執行沙箱有網域白名單，預設只放行套件庫（npm / PyPI）、GitHub、Ubuntu 與
+Anthropic 自家服務，不含本工具需要的任何一個網域。
+
+| 介面 | 能不能裝 | 網路 |
+|---|---|---|
+| **Claude Code** | ✅ 直接 clone | 完整網路，跟你電腦上任何程式一樣 |
+| **claude.ai** | ⚠️ Settings → Features 上傳 zip（Pro/Max/Team/Enterprise 且已開 code execution） | 依帳號／管理員設定而定，**預設擋掉** |
+| **Cowork / cloud session** | ⚠️ 讀的是 claude.ai 啟用的 skill，不讀 `~/.claude/skills/` | 同上 |
+| **Claude API** | ❌ | 完全無網路，這個 skill 不可能運作 |
+
+要在 claude.ai／Cowork 用，得把下列網域加進白名單（或開「完整網路存取」）：
+
+```
+lvr.land.moi.gov.tw          內政部實價登錄（必要）
+maps.googleapis.com          Google 定位
+nominatim.openstreetmap.org  備援定位
+sale.591.com.tw  rent.591.com.tw  www.sinyi.com.tw  buy.yungching.com.tw
+```
+
+另外注意兩點：
+
+- **skill 不會跨介面同步。** Claude Code 的 skill 是檔案系統上的，跟 claude.ai
+  和 API 各自獨立，要用就得分別上傳。
+- `${CLAUDE_SKILL_DIR}` 是 Claude Code 專屬的代換，在 claude.ai 會是字面文字。
+  `SKILL.md` 已經寫了 fallback 指示，但體驗不如 Claude Code。
+
+本專案的 frontmatter 只用 Agent Skills spec 允許的欄位，所以打包上傳不會因為
+未知欄位而報錯。要打包成可上傳的 zip：
+
+```bash
+./scripts/package.sh          # 產生 nearprice-skill.zip（不含金鑰）
+```
+
 ### 純 CLI
 
 ```bash
