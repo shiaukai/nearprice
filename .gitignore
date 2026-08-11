@@ -1,0 +1,16 @@
+# 金鑰 —— 絕對不能進版控
+.env
+*.env
+!*.env.example
+.claude/skills/tw-realprice/config.json
+
+# 個人的本機設定
+.claude/settings.local.json
+
+# 查詢輸出
+out/
+
+# Python
+*.pyc
+__pycache__/
+.DS_Store

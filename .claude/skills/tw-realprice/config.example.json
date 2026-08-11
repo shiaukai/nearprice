@@ -1,0 +1,59 @@
+{
+  "_說明": "複製成 config.json 後填入自己的設定。詳見 references/geocoding.md。",
+
+  "_providers說明": [
+    "依序嘗試，第一個成功的就採用。沒設定的 provider 會直接跳過，不會發請求。",
+    "google 是最推薦的主力：門牌級精度、涵蓋全台、不用自己架服務。",
+    "lvr 是零設定備援，完全免費，但長路段誤差可能到 1 公里以上。",
+    "locus 是作者自架的服務，一般人沒有，留在清單裡也只是被跳過。"
+  ],
+  "providers": ["google", "lvr", "nominatim"],
+
+  "google": {
+    "_說明": "Google Geocoding API。金鑰優先讀環境變數，沒有才讀 api_key；兩者都沒有就跳過。",
+    "_啟用步驟": [
+      "1. Google Cloud Console 建專案並開啟帳單",
+      "2. 啟用 Geocoding API（只要這一個，不需要 Maps JavaScript / Places）",
+      "3. 建 API key，建議加上 API 限制只允許 Geocoding API",
+      "4. 把金鑰放進 .env：GOOGLE_MAPS_API_KEY=你的金鑰"
+    ],
+    "api_key_env": "GOOGLE_MAPS_API_KEY",
+    "api_key": "",
+    "region": "tw",
+    "language": "zh-TW",
+    "timeout": 30,
+    "enabled": true
+  },
+
+  "locus": {
+    "_說明": "自架的 Locus Geo API（POST /resolve）。沒有這個服務就把它從 providers 拿掉。",
+    "base": "",
+    "path": "/resolve",
+    "api_key_header": "X-API-Key",
+    "api_key_env": "LOCUS_API_KEY",
+    "api_key": "",
+    "timeout": 30
+  },
+
+  "custom": {
+    "_說明": "任何其他自架定位服務。{address} 會被 URL-encode 後代入 url。",
+    "url": "",
+    "method": "GET",
+    "headers": {},
+    "lat_path": "data.0.lat",
+    "lon_path": "data.0.lon",
+    "score_path": "data.0.matchScore",
+    "timeout": 30
+  },
+
+  "tgos": {
+    "_說明": "官方 TGOS 全國門牌地址定位服務，需自行申請 appId / apiKey。",
+    "appId": "",
+    "apiKey": "",
+    "srs": "EPSG:4326",
+    "fuzzyType": "2"
+  },
+
+  "lvr_geocode_years": 3,
+  "nominatim_user_agent": "tw-realprice-skill/1.0"
+}
