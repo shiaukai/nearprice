@@ -39,9 +39,14 @@ allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/nearby.py:*), Bash(pytho
 python3 ${CLAUDE_SKILL_DIR}/scripts/relay.py check
 ```
 
-- **回「有對外連線」→ 走路徑 A**（下面的「標準流程」）。Claude Code 幾乎都是這個。
-- **回「連不到」→ 走路徑 B**（接力模式，見最後一節）。claude.ai / Cowork 的
-  程式碼沙箱有網域白名單，預設連不到內政部。
+- **回「有對外連線」→ 走路徑 A**（下面的「標準流程」）。終端機 CLI 與桌面 App 的
+  Code 分頁（環境選 `Local`）都是這個 —— 本機執行、完整網路。
+- **回「連不到」→ 走路徑 B**（接力模式，見最後一節）。桌面 App 的 Chat / Cowork
+  分頁與雲端 session 跑在沙箱裡，網域白名單預設不含內政部。
+
+若使用者是在 Chat 或 Cowork 分頁而且嫌接力模式麻煩，可以告訴他們：桌面 App 切到
+**Code 分頁、環境選 `Local`**，就會用本機 Python 與 `~/.claude/skills/`，
+路徑 A 直接可用。
 
 不要在路徑 A 失敗後才反覆重試 —— 連線被沙箱擋掉和官網改版的症狀很像，
 但處理方式完全不同。先 `check` 就不會誤判。

@@ -125,20 +125,28 @@ skill 本身不執行任何東西，它是一份 Markdown 說明 + 一包腳本�
 
 `SKILL.md` 的 `allowed-tools` 有預先授權這些腳本，所以跑起來不會一直跳權限確認。
 
-### 能裝在 claude.ai / Cowork 嗎？
+### 在桌面 App 裡用（Chat / Cowork / Code 三個分頁不一樣）
 
-技術上可以，但**預設會跑不動**——這個 skill 的每一項功能都要打外網，而 claude.ai
-的程式碼執行沙箱有網域白名單，預設只放行套件庫（npm / PyPI）、GitHub、Ubuntu 與
-Anthropic 自家服務，不含本工具需要的任何一個網域。
+Claude 桌面 App 有三個分頁，**程式碼跑在哪裡、skill 從哪裡讀，三者完全不同**。
+這是最容易搞混的地方：
 
-| 介面 | 能不能裝 | 網路 |
-|---|---|---|
-| **Claude Code** | ✅ 直接 clone | 完整網路，跟你電腦上任何程式一樣 |
-| **claude.ai** | ⚠️ Settings → Features 上傳 zip（Pro/Max/Team/Enterprise 且已開 code execution） | 依帳號／管理員設定而定，**預設擋掉** |
-| **Cowork / cloud session** | ⚠️ 讀的是 claude.ai 啟用的 skill，不讀 `~/.claude/skills/` | 同上 |
-| **Claude API** | ❌ | 完全無網路，這個 skill 不可能運作 |
+| 分頁 | 執行位置 | skill 從哪讀 | 網路 | 這個工具 |
+|---|---|---|---|---|
+| **Code**（環境選 `Local`） | **你的電腦** | `~/.claude/skills/` | 完整 | ✅ **直接可用** |
+| **Cowork** | 雲端沙箱（預設）或本機 VM | claude.ai 帳號（Customize 同步） | 白名單 proxy | ⚠️ 接力模式 |
+| **Chat** | 雲端沙箱 | claude.ai 帳號 | 白名單 | ⚠️ 接力模式 |
 
-要在 claude.ai／Cowork 用，得把下列網域加進白名單（或開「完整網路存取」）：
+**答案就是 Code 分頁。** 它讀的是跟終端機 CLI 同一份 `~/.claude/skills/` 與同一份
+settings，用你本機的 Python，網路沒有任何限制——跟你在終端機跑 `claude` 完全一樣。
+所以只要照上面「手動安裝」裝好，桌面 App 的 Code 分頁立刻就能用，**不用打包上傳、
+也不用走接力模式**。
+
+> 注意 Code 分頁的環境選單有 `Local` / `Cloud` / `SSH` / `WSL`。要**選 `Local`**；
+> 選 `Cloud` 就變成雲端 session，改讀 claude.ai 帳號的 skill，也就回到白名單問題。
+
+Chat 與 Cowork 分頁則是另一套：skill 要用 zip 上傳到 claude.ai（Settings → Features，
+Pro/Max/Team/Enterprise 且已開 code execution），沙箱的網域白名單預設只放行套件庫
+（npm / PyPI）、GitHub、Ubuntu 與 Anthropic 自家服務，**不含本工具需要的任何一個網域**：
 
 ```
 lvr.land.moi.gov.tw          內政部實價登錄（必要）
@@ -147,12 +155,15 @@ nominatim.openstreetmap.org  備援定位
 sale.591.com.tw  rent.591.com.tw  www.sinyi.com.tw  buy.yungching.com.tw
 ```
 
+管理員可以把這些加進白名單；不能改設定的話就走下面的接力模式。
+（Claude API 那條路則是**完全無網路**，接力模式也救不了，因為它連抓取工具都沒有。）
+
 另外注意兩點：
 
-- **skill 不會跨介面同步。** Claude Code 的 skill 是檔案系統上的，跟 claude.ai
-  和 API 各自獨立，要用就得分別上傳。
+- **skill 不會跨介面同步。** `~/.claude/skills/` 的檔案跟 claude.ai 帳號的 skill
+  是兩套，要在 Chat/Cowork 用就得分別上傳。
 - `${CLAUDE_SKILL_DIR}` 是 Claude Code 專屬的代換，在 claude.ai 會是字面文字。
-  `SKILL.md` 已經寫了 fallback 指示，但體驗不如 Claude Code。
+  `SKILL.md` 已經寫了 fallback 指示。
 
 #### 接力模式：沙箱沒網路也能用
 
